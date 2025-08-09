@@ -105,23 +105,11 @@ async def on_message(message):
     if level_up:
         await message.channel.send(f"🎉 Congrats {message.author.mention}, you leveled up to level {level_up}!")
 
-    if message.content.lower().startswith("level?"):
-        mentioned = message.mentions[0] if message.mentions else message.author
-        lvl = user_levels.get(mentioned.id, 0)
-        xp = user_xp.get(mentioned.id, 0)
-        await message.channel.send(f"📈 {mentioned.mention} is level {lvl} with {xp} XP.")
+    # Removed the old "level?" text command to avoid confusion
 
-    elif message.content.lower() == "xp left":
+    if message.content.lower() == "xp left":
         left = xp_to_next_level(message.author.id)
         await message.channel.send(f"⏳ {message.author.mention}, you need {left} XP to next level.")
-
-    elif message.content.lower() == "what commands" or bot.user in message.mentions:
-        await message.channel.send(
-            "**Commands:**\n"
-            "/kick, /ban, /timeout, /untimeout, /purge, /cmdstats, /leaderboard, /addxp, /removexp, /say\n"
-            "!lock, !unlock\n"
-            "level? @user, xp left"
-        )
 
     elif message.content.lower() == "key":
         await message.channel.send("dumb it's 'vault'. Say 'ok gimme key role' to stop me answering u")
@@ -223,6 +211,33 @@ async def leaderboard(interaction: discord.Interaction):
         name = user.name if user else f"User ID {user_id}"
         embed.add_field(name=f"{i}. {name}", value=f"{xp} XP", inline=False)
     await interaction.response.send_message(embed=embed)
+
+@tree.command(name="level", description="Check your or another user's level")
+async def level(interaction: discord.Interaction, member: discord.Member = None):
+    member = member or interaction.user
+    lvl = user_levels.get(member.id, 0)
+    xp = user_xp.get(member.id, 0)
+    await interaction.response.send_message(f"📈 {member.mention} is level {lvl} with {xp} XP.")
+
+@tree.command(name="nick", description="Change a user's nickname")
+@app_commands.checks.has_permissions(manage_nicknames=True)
+async def nick(interaction: discord.Interaction, member: discord.Member, new_nick: str):
+    try:
+        await member.edit(nick=new_nick)
+        track_command(interaction.user.id, "nick")
+        await interaction.response.send_message(f"✅ Nickname changed for {member.mention} to `{new_nick}`.")
+    except Exception:
+        await interaction.response.send_message("❌ Failed to change nickname.", ephemeral=True)
+
+@tree.command(name="whatcommands", description="Show list of commands")
+async def whatcommands(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "**Slash Commands:**\n"
+        "/kick, /ban, /timeout, /untimeout, /purge, /cmdstats, /leaderboard, /addxp, /removexp, /level, /nick, /whatcommands\n"
+        "**Text Commands:**\n"
+        "!lock, !unlock, !say\n"
+        "Other: xp left, key"
+    )
 
 # --- Text commands ---
 
